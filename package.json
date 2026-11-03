@@ -1,0 +1,13 @@
+{
+  "name": "transkiapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Transcripción paleográfica de documentos de los siglos XVI-XVIII",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0"
+  }
+}
