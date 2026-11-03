@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TranskiApp</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#eef1f6; --b1:#b9d4ff; --b2:#ffd3e6; --b3:#c4f2e1;
+  --glass-a:rgba(255,255,255,.62); --glass-b:rgba(255,255,255,.26); --glass-solid:rgba(255,255,255,.80);
+  --stroke:rgba(255,255,255,.75); --text:#1c1c1e; --muted:#6e6e73;
+  --accent:#0a84ff; --accent-glow:rgba(10,132,255,.35); --shadow:0 12px 40px rgba(20,30,60,.12); --hl:rgba(255,255,255,.9);
+  --warn:#b25000;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark; --bg:#0b0c10; --b1:#1e3c78; --b2:#4a1f5c; --b3:#164d44;
+    --glass-a:rgba(60,60,72,.46); --glass-b:rgba(30,30,38,.22); --glass-solid:rgba(44,44,52,.82);
+    --stroke:rgba(255,255,255,.14); --text:#f5f5f7; --muted:#a1a1a8;
+    --accent:#4ea1ff; --accent-glow:rgba(78,161,255,.35); --shadow:0 12px 40px rgba(0,0,0,.45); --hl:rgba(255,255,255,.18);
+    --warn:#ffb070;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#0b0c10; --b1:#1e3c78; --b2:#4a1f5c; --b3:#164d44;
+  --glass-a:rgba(60,60,72,.46); --glass-b:rgba(30,30,38,.22); --glass-solid:rgba(44,44,52,.82);
+  --stroke:rgba(255,255,255,.14); --text:#f5f5f7; --muted:#a1a1a8;
+  --accent:#4ea1ff; --accent-glow:rgba(78,161,255,.35); --shadow:0 12px 40px rgba(0,0,0,.45); --hl:rgba(255,255,255,.18);
+  --warn:#ffb070;
+}
+:root[data-theme="light"]{ color-scheme:light; }
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{background:var(--bg);min-height:100%}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,Helvetica,sans-serif;
+  padding:env(safe-area-inset-top,0px) 18px env(safe-area-inset-bottom,0px);
+  -webkit-font-smoothing:antialiased;
+}
+.blobs{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
+.blobs span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.9}
+.blobs .b1{width:55vmax;height:55vmax;left:-15vmax;top:-18vmax;background:var(--b1)}
+.blobs .b2{width:46vmax;height:46vmax;right:-14vmax;top:12vh;background:var(--b2)}
+.blobs .b3{width:50vmax;height:50vmax;left:18vw;bottom:-28vmax;background:var(--b3)}
+
+main{max-width:960px;margin:0 auto;padding:28px 0 48px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}
+h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0;font-size:.98rem;line-height:1.45}
+
+.glass{
+  position:relative;overflow:hidden;
+  background:linear-gradient(145deg,var(--glass-a),var(--glass-b));
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--stroke);border-radius:26px;
+  box-shadow:inset 0 1px 0 var(--hl), var(--shadow);
+  padding:22px;margin-bottom:18px;
+}
+.glass::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(115deg,transparent 22%,rgba(255,255,255,.22) 38%,transparent 52%);opacity:.7;
+}
+.glass > *{position:relative}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+
+.drop{
+  display:block;text-align:center;cursor:pointer;color:var(--muted);
+  padding:30px 20px;border-radius:20px;border:1px dashed rgba(127,127,140,.45);
+  background:rgba(255,255,255,.06);transition:background .25s,border-color .25s,color .25s;
+}
+.drop:hover,.drop.over{background:rgba(255,255,255,.16);border-color:var(--accent);color:var(--text)}
+.drop input{display:none}
+.drop .icon{font-size:1.6rem;display:block;margin-bottom:6px;opacity:.8}
+
+.btn{
+  font:inherit;font-size:.95rem;cursor:pointer;color:var(--text);
+  padding:9px 18px;border-radius:999px;border:1px solid var(--stroke);
+  background:linear-gradient(145deg,rgba(255,255,255,.35),rgba(255,255,255,.08));
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:inset 0 1px 0 var(--hl);transition:transform .15s,opacity .2s,background .2s;
+}
+.btn:hover{background:linear-gradient(145deg,rgba(255,255,255,.5),rgba(255,255,255,.14))}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn.primary{
+  background:linear-gradient(145deg,var(--accent),var(--accent));color:#fff;border-color:transparent;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 8px 22px var(--accent-glow);
+}
+.btn.small{font-size:.86rem;padding:6px 12px}
+.theme{flex:0 0 auto;width:42px;height:42px;border-radius:50%;padding:0;display:grid;place-items:center;font-size:1.1rem}
+
+.layout{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start}
+.pages{display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:4px}
+.page{
+  display:flex;gap:12px;align-items:center;text-align:left;cursor:pointer;color:var(--text);
+  padding:8px;border-radius:16px;border:1px solid transparent;background:rgba(127,127,140,.06);
+  font:inherit;transition:background .2s,border-color .2s;
+}
+.page:hover{background:rgba(255,255,255,.14)}
+.page.on{background:var(--glass-solid);border-color:var(--stroke);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.page img{width:54px;height:72px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);flex:0 0 auto}
+.page .meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.page .name{font-size:.92rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:.78rem;color:var(--muted)}
+.badge.ok{color:#30a46c}
+.badge.err{color:#ff453a}
+.badge.work{color:var(--accent)}
+
+textarea{
+  width:100%;min-height:460px;resize:vertical;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;line-height:1.6;
+  color:var(--text);background:rgba(127,127,140,.08);
+  border:1px solid var(--stroke);border-radius:18px;padding:16px;outline:none;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.05);
+}
+textarea:focus{border-color:var(--accent)}
+#status{color:var(--muted);font-size:.95rem;min-height:1.3em}
+#status.err{color:#ff453a}
+.warn{color:var(--warn);font-size:.9rem;line-height:1.5;margin:0 0 14px}
+.hint{color:var(--muted);font-size:.9rem;line-height:1.5;margin:0}
+.empty{color:var(--muted);padding:30px 10px;text-align:center;font-size:.95rem}
+select{
+  font:inherit;font-size:.92rem;color:var(--text);padding:7px 12px;border-radius:12px;
+  border:1px solid var(--stroke);background:var(--glass-solid);
+}
+
+@media (max-width:760px){
+  .layout{grid-template-columns:1fr}
+  .pages{flex-direction:row;max-height:none;overflow-x:auto;padding-bottom:6px}
+  .page{min-width:200px}
+  h1{font-size:1.45rem}
+  .glass{padding:18px;border-radius:22px}
+}
+/* ---------- Estilo cartográfico inspirado en los atlas de Ortelius, con vidrio líquido ---------- */
+:root{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 50% 40%,#f7eed9 0%,#ead7ad 70%,#cdb082 100%);
+  --b1:#e2c08a; --b2:#b9cfc0; --b3:#d9b29a;
+  --glass-a:rgba(255,250,236,.62); --glass-b:rgba(246,234,205,.24); --glass-solid:rgba(255,249,234,.88);
+  --stroke:rgba(120,84,40,.38); --text:#3b2a1a; --muted:#7a6246;
+  --accent:#8b3a2b; --accent-glow:rgba(139,58,43,.30); --shadow:0 10px 30px rgba(70,45,15,.16); --hl:rgba(255,255,255,.85);
+  --warn:#8b3a2b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:radial-gradient(ellipse at 50% 40%,#2a2219 0%,#17120c 75%,#0d0a06 100%);
+    --b1:#5a3f1f; --b2:#23402f; --b3:#4a2a1c;
+    --glass-a:rgba(70,56,38,.45); --glass-b:rgba(40,30,18,.25); --glass-solid:rgba(58,46,30,.85);
+    --stroke:rgba(214,176,112,.30); --text:#efe2c6; --muted:#b29d7a;
+    --accent:#d9a25f; --accent-glow:rgba(217,162,95,.30); --shadow:0 10px 30px rgba(0,0,0,.5); --hl:rgba(255,235,200,.15);
+    --warn:#e8b06a;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:radial-gradient(ellipse at 50% 40%,#2a2219 0%,#17120c 75%,#0d0a06 100%);
+  --b1:#5a3f1f; --b2:#23402f; --b3:#4a2a1c;
+  --glass-a:rgba(70,56,38,.45); --glass-b:rgba(40,30,18,.25); --glass-solid:rgba(58,46,30,.85);
+  --stroke:rgba(214,176,112,.30); --text:#efe2c6; --muted:#b29d7a;
+  --accent:#d9a25f; --accent-glow:rgba(217,162,95,.30); --shadow:0 10px 30px rgba(0,0,0,.5); --hl:rgba(255,235,200,.15);
+  --warn:#e8b06a;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 50% 40%,#f7eed9 0%,#ead7ad 70%,#cdb082 100%);
+  --b1:#e2c08a; --b2:#b9cfc0; --b3:#d9b29a;
+  --glass-a:rgba(255,250,236,.62); --glass-b:rgba(246,234,205,.24); --glass-solid:rgba(255,249,234,.88);
+  --stroke:rgba(120,84,40,.38); --text:#3b2a1a; --muted:#7a6246;
+  --accent:#8b3a2b; --accent-glow:rgba(139,58,43,.30); --shadow:0 10px 30px rgba(70,45,15,.16); --hl:rgba(255,255,255,.85);
+  --warn:#8b3a2b;
+}
+
+html{background:var(--bg);background-attachment:fixed}
+body{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;}
+
+/* Malla de grabado y manchas de color sobre el pergamino */
+.blobs{
+  background-color:transparent;
+  background-image:
+    repeating-linear-gradient(0deg,rgba(110,75,30,.07) 0 1px,transparent 1px 44px),
+    repeating-linear-gradient(90deg,rgba(110,75,30,.07) 0 1px,transparent 1px 44px),
+    var(--bg);
+}
+.blobs span{opacity:.4;filter:blur(90px)}
+
+h1{
+  font-family:inherit;font-variant:small-caps;letter-spacing:.06em;font-size:1.9rem;font-weight:700;
+}
+h1::after{
+  content:"";display:block;width:160px;height:6px;margin-top:10px;
+  border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);
+}
+p.sub{font-style:italic;font-size:1rem}
+
+/* Cartela: marco doble como los de las portadas de Ortelius */
+.glass{
+  border-radius:16px;
+  box-shadow:inset 0 0 0 4px transparent, inset 0 0 0 5px var(--stroke), inset 0 1px 0 var(--hl), var(--shadow);
+}
+.glass::before{
+  background:linear-gradient(115deg,transparent 22%,rgba(255,255,255,.28) 38%,transparent 52%);
+}
+
+.drop{border-radius:12px;border-color:rgba(120,84,40,.45)}
+.drop:hover,.drop.over{background:rgba(255,250,236,.3)}
+
+.btn{font-family:inherit;letter-spacing:.02em}
+.btn.primary{background:linear-gradient(145deg,var(--accent),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 8px 20px var(--accent-glow)}
+
+.seg button.on{font-weight:700}
+.page{font-family:inherit}
+.page .name{font-variant:small-caps;letter-spacing:.03em}
+.page img{border:1px solid var(--stroke)}
+
+textarea{background:rgba(120,84,40,.06);font-size:13.5px}
+.warn{font-style:italic}
+
+/* ---------- Blanco y negro clásico, estética Apple, con vidrio líquido ---------- */
+:root{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 50% 25%,#ffffff 0%,#eeeef2 60%,#dcdce2 100%);
+  --b1:#e4e4ea; --b2:#f3f3f7; --b3:#d6d6dd;
+  --glass-a:rgba(255,255,255,.66); --glass-b:rgba(255,255,255,.28); --glass-solid:rgba(255,255,255,.92);
+  --stroke:rgba(0,0,0,.08); --text:#1d1d1f; --muted:#6e6e73;
+  --accent:#1d1d1f; --on-accent:#ffffff; --accent-glow:rgba(0,0,0,.18); --shadow:0 10px 32px rgba(0,0,0,.08); --hl:rgba(255,255,255,.95);
+  --warn:#1d1d1f;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:radial-gradient(ellipse at 50% 25%,#1c1c1e 0%,#000000 80%);
+    --b1:#2a2a30; --b2:#1c1c22; --b3:#33333b;
+    --glass-a:rgba(72,72,78,.46); --glass-b:rgba(40,40,46,.24); --glass-solid:rgba(58,58,64,.88);
+    --stroke:rgba(255,255,255,.12); --text:#f5f5f7; --muted:#98989f;
+    --accent:#f5f5f7; --on-accent:#000000; --accent-glow:rgba(255,255,255,.14); --shadow:0 10px 32px rgba(0,0,0,.5); --hl:rgba(255,255,255,.16);
+    --warn:#f5f5f7;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:radial-gradient(ellipse at 50% 25%,#1c1c1e 0%,#000000 80%);
+  --b1:#2a2a30; --b2:#1c1c22; --b3:#33333b;
+  --glass-a:rgba(72,72,78,.46); --glass-b:rgba(40,40,46,.24); --glass-solid:rgba(58,58,64,.88);
+  --stroke:rgba(255,255,255,.12); --text:#f5f5f7; --muted:#98989f;
+  --accent:#f5f5f7; --on-accent:#000000; --accent-glow:rgba(255,255,255,.14); --shadow:0 10px 32px rgba(0,0,0,.5); --hl:rgba(255,255,255,.16);
+  --warn:#f5f5f7;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 50% 25%,#ffffff 0%,#eeeef2 60%,#dcdce2 100%);
+  --b1:#e4e4ea; --b2:#f3f3f7; --b3:#d6d6dd;
+  --glass-a:rgba(255,255,255,.66); --glass-b:rgba(255,255,255,.28); --glass-solid:rgba(255,255,255,.92);
+  --stroke:rgba(0,0,0,.08); --text:#1d1d1f; --muted:#6e6e73;
+  --accent:#1d1d1f; --on-accent:#ffffff; --accent-glow:rgba(0,0,0,.18); --shadow:0 10px 32px rgba(0,0,0,.08); --hl:rgba(255,255,255,.95);
+  --warn:#1d1d1f;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;}
+.blobs{background-image:var(--bg);}
+.blobs span{opacity:.5;filter:blur(90px)}
+
+h1{font-variant:normal;letter-spacing:-.02em;font-size:1.75rem;font-weight:700}
+h1::after{display:none}
+p.sub{font-style:normal}
+
+.glass{border-radius:26px;box-shadow:inset 0 1px 0 var(--hl), var(--shadow);}
+.glass::before{background:linear-gradient(115deg,transparent 22%,rgba(255,255,255,.35) 38%,transparent 52%);}
+
+.drop{border-radius:20px;border-color:rgba(127,127,140,.45)}
+.drop:hover,.drop.over{background:rgba(127,127,140,.08)}
+
+.btn{font-family:inherit;letter-spacing:0}
+.btn.primary{color:var(--on-accent);background:linear-gradient(145deg,var(--accent),var(--accent));box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 8px 22px var(--accent-glow)}
+.btn.primary:hover{filter:none;opacity:.9}
+
+.seg button.on{font-weight:600}
+.page .name{font-variant:normal;letter-spacing:0}
+.page img{border:none}
+
+textarea{background:rgba(127,127,140,.07)}
+.warn{font-style:normal}
+
+/* ---------- Elementos gráficos en vidrio líquido: globo, pluma y tinta ---------- */
+h1{display:flex;align-items:center;gap:12px}
+.ico-tile{
+  width:46px;height:46px;flex:0 0 auto;border-radius:15px;display:grid;place-items:center;
+  background:linear-gradient(145deg,rgba(255,255,255,.55),rgba(255,255,255,.12));
+  border:1px solid var(--stroke);
+  box-shadow:inset 0 1px 0 var(--hl), 0 6px 18px rgba(0,0,0,.08);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  color:var(--text);
+}
+.ico-tile svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ico-tile.big{width:64px;height:64px;border-radius:20px;margin:0 auto 12px}
+.ico-tile.big svg{width:32px;height:32px}
+.ico-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;margin-right:6px}
+.bgglobe{position:absolute;right:-16vmax;bottom:-14vmax;width:78vmax;height:78vmax;fill:none;stroke:var(--text);stroke-width:.35;opacity:.06}
+.drop .ico-tile.big{color:var(--text)}
+
+/* ---------- Visor del original ---------- */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.viewer{
+  position:relative;height:560px;overflow:auto;border-radius:18px;
+  border:1px solid var(--stroke);background:rgba(127,127,140,.08);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.06);
+}
+.viewer img{display:block;width:100%;height:auto;border-radius:12px;cursor:zoom-in;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.viewer img.zoom{width:170%;max-width:none;cursor:zoom-out}
+.viewer .empty{padding-top:40%}
+.workspace textarea{min-height:560px}
+@media (max-width:1000px){
+  .workspace{grid-template-columns:1fr}
+  .viewer{height:420px}
+  .workspace textarea{min-height:360px}
+}
+
+/* ---------- Visor más grande y con zoom ---------- */
+.layout{grid-template-columns:200px minmax(0,1fr)}
+.workspace{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.viewer-wrap{min-width:0}
+.zoombar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.zoombar .btn.small{min-width:38px}
+.zoombar .hint{margin-left:4px}
+.viewer{height:calc(100vh - 190px);min-height:680px}
+.viewer img{cursor:default;width:100%}
+.workspace textarea{min-height:680px}
+@media (max-width:1000px){
+  .layout{grid-template-columns:1fr}
+  .workspace{grid-template-columns:1fr}
+  .viewer{height:70vh;min-height:440px}
+  .workspace textarea{min-height:380px}
+}
+
+.imgwrap{position:relative;width:100%}
+#ann{position:absolute;left:0;top:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+#viewer.contrast{background:#111}
+#viewer.contrast img{filter:invert(1) hue-rotate(180deg) contrast(1.25)}
+.btn.small.on,#contrast[aria-pressed="true"]{background:var(--glass-solid);font-weight:600}
+#annColor{font:inherit;font-size:.86rem;padding:5px 8px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-solid);color:var(--text)}
+
+.viewer.panning,.viewer.panning *{cursor:grabbing !important;user-select:none}
+
+/* ---------- Paleta inspirada en el mapa Maris Pacifici (Ortelius, 1589), sin usar la imagen ---------- */
+:root{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 40% 30%,#f5ebc8 0%,#e7d398 55%,#c9ad6a 100%);
+  --b1:#e9c77c; --b2:#dcaaa0; --b3:#8fb8b0;
+  --grid:rgba(86,62,30,.11); --dot:rgba(86,62,30,.16);
+  --glass-a:rgba(255,251,236,.6); --glass-b:rgba(240,226,176,.22); --glass-solid:rgba(255,249,230,.9);
+  --stroke:rgba(96,66,30,.36); --text:#2e2416; --muted:#6b5a3e;
+  --accent:#9e2f2c; --on-accent:#fff7e6; --accent-glow:rgba(158,47,44,.28);
+  --shadow:0 10px 30px rgba(74,52,20,.18); --hl:rgba(255,255,255,.82);
+  --warn:#9e2f2c;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:radial-gradient(ellipse at 40% 30%,#22343a 0%,#111b20 60%,#070d10 100%);
+    --b1:#5b4a1f; --b2:#4a2b2b; --b3:#1d4046;
+    --grid:rgba(214,184,112,.08); --dot:rgba(214,184,112,.14);
+    --glass-a:rgba(44,58,62,.5); --glass-b:rgba(20,32,36,.26); --glass-solid:rgba(40,54,58,.9);
+    --stroke:rgba(214,184,112,.3); --text:#f1e6c8; --muted:#a99b79;
+    --accent:#e0b35a; --on-accent:#1b1408; --accent-glow:rgba(224,179,90,.3);
+    --shadow:0 10px 30px rgba(0,0,0,.55); --hl:rgba(255,240,200,.14);
+    --warn:#e0b35a;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:radial-gradient(ellipse at 40% 30%,#22343a 0%,#111b20 60%,#070d10 100%);
+  --b1:#5b4a1f; --b2:#4a2b2b; --b3:#1d4046;
+  --grid:rgba(214,184,112,.08); --dot:rgba(214,184,112,.14);
+  --glass-a:rgba(44,58,62,.5); --glass-b:rgba(20,32,36,.26); --glass-solid:rgba(40,54,58,.9);
+  --stroke:rgba(214,184,112,.3); --text:#f1e6c8; --muted:#a99b79;
+  --accent:#e0b35a; --on-accent:#1b1408; --accent-glow:rgba(224,179,90,.3);
+  --shadow:0 10px 30px rgba(0,0,0,.55); --hl:rgba(255,240,200,.14);
+  --warn:#e0b35a;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:radial-gradient(ellipse at 40% 30%,#f5ebc8 0%,#e7d398 55%,#c9ad6a 100%);
+  --b1:#e9c77c; --b2:#dcaaa0; --b3:#8fb8b0;
+  --grid:rgba(86,62,30,.11); --dot:rgba(86,62,30,.16);
+  --glass-a:rgba(255,251,236,.6); --glass-b:rgba(240,226,176,.22); --glass-solid:rgba(255,249,230,.9);
+  --stroke:rgba(96,66,30,.36); --text:#2e2416; --muted:#6b5a3e;
+  --accent:#9e2f2c; --on-accent:#fff7e6; --accent-glow:rgba(158,47,44,.28);
+  --shadow:0 10px 30px rgba(74,52,20,.18); --hl:rgba(255,255,255,.82);
+  --warn:#9e2f2c;
+}
+
+body{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;}
+
+/* Mar punteado y meridianos del mapa */
+.blobs{
+  background-color:transparent;
+  background-image:
+    radial-gradient(var(--dot) 0.8px,transparent 1.1px) 0 0/7px 7px,
+    repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 96px),
+    repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 96px),
+    var(--bg);
+}
+.blobs span{opacity:.45;filter:blur(90px)}
+
+h1{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-weight:700;letter-spacing:.01em;font-size:1.9rem}
+p.sub{font-family:inherit;font-style:italic;color:var(--muted)}
+
+/* Cartela con marco doble, como las del mapa */
+.glass{
+  border-radius:18px;
+  box-shadow:inset 0 0 0 4px transparent, inset 0 0 0 5px var(--stroke), inset 0 1px 0 var(--hl), var(--shadow);
+}
+.glass::before{background:linear-gradient(115deg,transparent 22%,rgba(255,255,255,.3) 38%,transparent 52%)}
+
+.drop{border-radius:14px;border-color:var(--stroke)}
+.drop:hover,.drop.over{background:rgba(255,250,230,.3)}
+
+.btn{font-family:inherit;letter-spacing:.01em}
+.btn.primary{
+  background:linear-gradient(145deg,var(--accent),color-mix(in srgb,var(--accent) 78%,#000 22%));
+  color:var(--on-accent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 8px 20px var(--accent-glow);
+}
+
+.seg button.on,.btn.small.on,#contrast[aria-pressed="true"]{background:var(--glass-solid);font-weight:700}
+.page .name{font-variant:normal;font-weight:700}
+.page img{border:1px solid var(--stroke)}
+
+.tool{font-style:italic}
+textarea{background:rgba(120,90,40,.07)}
+.warn{font-style:italic}
+
+/* ---------- Imagen del mapa como fondo, con velo para que el vidrio y el texto sean legibles ---------- */
+:root{--veil:rgba(246,236,206,.80);}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--veil:rgba(10,18,22,.82);}
+}
+:root[data-theme="dark"]{--veil:rgba(10,18,22,.82);}
+:root[data-theme="light"]{--veil:rgba(246,236,206,.80);}
+
+.blobs{
+  background-color:transparent;
+  background-image:
+    radial-gradient(var(--dot) 0.8px,transparent 1.1px),
+    repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 96px),
+    repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 96px),
+    linear-gradient(var(--veil),var(--veil)),
+    url("assets/fondo_ortelius.jpg");
+  background-size:7px 7px,auto,auto,auto,cover;
+  background-position:0 0,0 0,0 0,0 0,center center;
+  background-repeat:repeat,repeat,repeat,no-repeat,no-repeat;
+}
+.blobs span{opacity:.25}
+html{background:var(--bg)}
+
+/* ---------- Aviso previo, guía e información de uso ---------- */
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.modal-card{max-width:480px;width:100%;margin:0}
+.modal-card h2{margin:0 0 12px;font-size:1.35rem}
+.modal-list{margin:0 0 20px;padding-left:20px;line-height:1.6;color:var(--text)}
+.sec-title{font-size:1.1rem;font-weight:700;cursor:pointer}
+.guide{margin:16px 0 0;padding-left:22px;line-height:1.7;color:var(--text)}
+.info-body{margin-top:14px;line-height:1.6}
+.info-body p{margin:0 0 10px}
+
+</style>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="blobs" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><svg class="bgglobe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M4.5 7.5h15M4.5 16.5h15"/></svg></div>
+
+<main>
+  <header>
+    <div>
+      <h1><span class="ico-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M4.5 7.5h15M4.5 16.5h15"/></svg></span>TranskiApp</h1>
+      <p class="sub">Documentos hispánicos de los siglos XVI al XVIII (PDF, JPG o PNG), transcritos según la norma que elijas.</p>
+    </div>
+    <button id="account" class="btn small" hidden>Iniciar sesión</button>
+    <button id="theme" class="btn theme" title="Cambiar entre modo claro y oscuro" aria-label="Cambiar tema">◐</button>
+  </header>
+
+  <section class="glass">
+    <label class="drop" id="drop">
+      <span class="ico-tile big" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.5 3.5c-4.5.3-8.5 3.4-10 8.2L8 14l2.3-.5c4.8-1.5 7.9-5.5 8.2-10z"/><path d="M4.5 20.5L8 14"/><path d="M11 10.5l2.5 2.5"/></svg></span>
+      <span id="dropText">Arrastra un PDF, JPG o PNG aquí, o haz clic para elegirlo</span>
+      <input type="file" id="file" accept="application/pdf,image/png,image/jpeg">
+    </label>
+  </section>
+
+  <section class="glass">
+    <p class="warn">Es una transcripción automática. Compárala siempre con la imagen antes de usarla: las abreviaturas, las tildes y las lecturas dudosas son los puntos más propensos a error.</p>
+    <div class="row spread" style="margin-bottom:14px">
+      <span id="status">Esperando un documento…</span>
+      <div class="row">
+        <label class="hint" for="norm">Tipo</label>
+        <select id="norm">
+          <option value="hsms" selected>Transcripción HSMS</option>
+          <option value="paleo">Transcripción diplomática</option>
+        </select>
+        <label class="hint" for="model">Precisión</label>
+        <select id="model">
+          <option value="complex" selected>Alta (más lenta)</option>
+          <option value="default">Estándar</option>
+          <option value="quick">Rápida</option>
+        </select>
+        <button id="transcribeAll" class="btn primary ico-btn" disabled><svg viewBox="0 0 24 24"><path d="M7.5 11h9v7.5a2.5 2.5 0 0 1-2.5 2.5h-4A2.5 2.5 0 0 1 7.5 18.5z"/><path d="M10 11V8.5h4V11"/><path d="M9 8.5h6"/><path d="M19.5 14.5c0 1-.7 1.8-1.5 1.8s-1.5-.8-1.5-1.8c0-1 1.5-2.7 1.5-2.7s1.5 1.7 1.5 2.7z"/></svg>Transcribir todo</button>
+        <button id="pause" class="btn small" hidden>Pausar transcripción</button>
+        <button id="retry" class="btn small" disabled>Repetir página</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="pages" id="pages"><div class="empty">Las páginas aparecerán aquí.</div></div>
+      <div>
+        <div class="viewer-wrap"><div class="zoombar"><button id="zOut" class="btn small" title="Reducir">−</button><button id="zFit" class="btn small" title="Ajustar al ancho">Ajustar</button><button id="zIn" class="btn small" title="Ampliar">+</button><span class="hint" id="zLabel">100 %</span><button id="contrast" class="btn small" aria-pressed="false" title="Invertir colores para ver mejor los trazos">Contraste</button><button class="btn small tool on" data-tool="pen" title="Lápiz libre">Lápiz</button><button class="btn small tool" data-tool="line" title="Subrayado translúcido">Subrayado</button><button class="btn small tool" data-tool="rect" title="Recuadro">Recuadro</button><select id="annColor" title="Color de la anotación"><option value="#e0312b">Rojo</option><option value="#1f6feb">Azul</option><option value="#f5c400">Amarillo</option><option value="#111111">Negro</option></select><button id="annClear" class="btn small" title="Borrar las anotaciones de esta página">Borrar anotaciones</button></div><div class="viewer" id="viewer" title="Botón derecho: arrastrar para desplazarse por el documento"><div class="imgwrap" id="imgwrap"><img id="pageImg" alt="Página original" hidden><canvas id="ann"></canvas></div><div class="empty" id="viewerEmpty">La imagen original aparecerá aquí.</div></div></div><textarea id="out" placeholder="La transcripción de la página seleccionada aparecerá aquí. Puedes corregirla a mano."></textarea></div>
+        <div class="row spread" style="margin-top:12px">
+          <span class="hint" id="pageInfo"></span>
+          <div class="row">
+            <button id="copy" class="btn small" disabled>Copiar página</button>
+            <button id="save" class="btn small primary" disabled>Descargar todo (.txt)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="glass">
+    <details open>
+      <summary class="sec-title">Guía paso a paso</summary>
+      <ol class="guide">
+        <li><strong>Inicia sesión.</strong> Pulsa «Iniciar sesión» arriba a la derecha, con tu correo o con Google.</li>
+        <li><strong>Sube el documento.</strong> Arrastra un PDF, JPG o PNG a la zona superior, o pulsa sobre ella para elegirlo. Un PDF se separa automáticamente en páginas.</li>
+        <li><strong>Elige el tipo de transcripción.</strong> «Transcripción HSMS» sigue las etiquetas del sistema HSMS, pensadas para Transkribus. «Transcripción diplomática» da texto corrido, con la grafía original y las abreviaturas entre corchetes.</li>
+        <li><strong>Elige la precisión.</strong> «Alta» es más fiable pero más lenta. «Rápida» sirve para hacer pruebas.</li>
+        <li><strong>Transcribe.</strong> Pulsa «Transcribir todo» y confirma en el aviso. Las páginas se procesan una a una. Cada página transcrita cuenta para tu límite diario.</li>
+        <li><strong>Revisa cada página.</strong> Selecciónala en la lista. A la izquierda verás el original y a la derecha la transcripción.</li>
+        <li><strong>Ajusta el visor.</strong> Usa «+» y «−» para ampliar, «Contraste» para ver mejor los trazos y el botón derecho del ratón para desplazarte. «Lápiz», «Subrayado» y «Recuadro» sirven para marcar durante la revisión.</li>
+        <li><strong>Corrige el texto.</strong> Edita directamente el cuadro de transcripción. Los contadores muestran líneas, palabras y caracteres.</li>
+        <li><strong>Si algo falla.</strong> Usa «Repetir página». Para detener el trabajo, pulsa «Pausar transcripción»; después puedes seguir con «Transcribir todo».</li>
+        <li><strong>Descarga el resultado.</strong> «Descargar todo (.txt)» guarda todas las páginas en un archivo. «Copiar página» copia solo la que estás viendo.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="glass">
+    <details>
+      <summary class="sec-title">Información de uso</summary>
+      <div class="hint info-body">
+        <p><strong>Límites.</strong> Cada usuario puede transcribir hasta 10 páginas al día. El contador se reinicia cada día. Cada imagen puede pesar hasta 5 MB.</p>
+        <p><strong>Capacidad compartida.</strong> El servicio usa un nivel gratuito de Google Gemini, que es compartido por todos los usuarios. Si se agota, verás el aviso «Capacidad gratuita diaria temporalmente alcanzada» y deberás volver más tarde.</p>
+        <p><strong>Privacidad.</strong> Las imágenes se envían a la API de Google Gemini en su modalidad gratuita. Según las políticas de Google, los datos enviados en ese nivel pueden usarse para mantener y mejorar sus servicios. No subas contraseñas, datos bancarios, historiales médicos ni información personal confidencial de terceros.</p>
+        <p><strong>Exactitud.</strong> Las transcripciones son automáticas. No garantizan la exactitud y no constituyen una certificación oficial. Revísalas siempre con la imagen original.</p>
+        <p><strong>Uso prohibido.</strong> Está prohibido automatizar peticiones con bots o scrapers, o intentar saturar la infraestructura del sitio.</p>
+        <p><strong>Cuentas.</strong> Para transcribir es necesario iniciar sesión. El acceso lo concede el administrador de la web.</p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const root = document.documentElement;
+
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  // ---------- Tema ----------
+  function effectiveTheme(){
+    if (root.dataset.theme) return root.dataset.theme;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  $("theme").addEventListener("click", () => {
+    root.dataset.theme = effectiveTheme() === "dark" ? "light" : "dark";
+  });
+
+  // ---------- Permisos ----------
+  let sampleFn = null, downloads = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    Promise.resolve(window.claude.use("sample")).then(ns => {
+      sampleFn = ns;
+      if (!ns) setStatus("La transcripción con IA no está disponible en este visor.", true);
+    }).catch(() => setStatus("La transcripción con IA no está disponible en este visor.", true));
+    Promise.resolve(window.claude.use("downloads")).then(ns => {
+      downloads = ns;
+      $("save").hidden = !ns;
+    }).catch(() => { $("save").hidden = true; });
+  } else {
+    // Modo independiente: la transcripción pasa por el servidor propio (/api/transcribe)
+    const blobToBase64 = blob => new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(",")[1]);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+    sampleFn = async (text, opts = {}) => {
+      const ident = window.netlifyIdentity;
+      const user = ident && ident.currentUser();
+      if (!user) {
+        if (ident) ident.open("login");
+        const err = new Error("Inicia sesión para transcribir");
+        err.code = "not_granted";
+        throw err;
+      }
+      const jwt = await user.jwt();
+      const image = await blobToBase64(opts.images[0]);
+      const r = await fetch("api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + jwt },
+        body: JSON.stringify({ prompt: text, image, mediaType: "image/jpeg", tier: opts.modelTier || "default" }),
+        signal: opts.signal
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(data.error || "Error del servidor");
+        err.code = r.status === 401 ? "not_granted" : r.status === 429 ? "rate_limited" : "server";
+        throw err;
+      }
+      return { text: data.text || "" };
+    };
+    downloads = {
+      save: async ({ filename, data }) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([data], { type: "text/plain;charset=utf-8" }));
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    };
+    $("save").hidden = false;
+    const acc = $("account");
+    if (window.netlifyIdentity) {
+      const ident = window.netlifyIdentity;
+      const refresh = () => { acc.textContent = ident.currentUser() ? "Cerrar sesión" : "Iniciar sesión"; };
+      acc.hidden = false;
+      ident.on("init", refresh);
+      ident.on("login", () => { refresh(); ident.close(); });
+      ident.on("logout", refresh);
+      acc.addEventListener("click", () => {
+        if (ident.currentUser()) ident.logout();
+        else ident.open("login");
+      });
+      ident.init();
+    }
+  }
+
+  // ---------- Estado ----------
+  let pages = [];        // {name, blob, thumb, text, status: 'pending'|'working'|'done'|'error', error}
+  let current = -1;
+  let currentAbort = null, stopRequested = false;
+  let baseName = "transcripcion";
+
+  // ---------- Reglas de transcripción (skill transcripcion-paleografica-moderna) ----------
+  const RULES = `Actúas como un motor de extracción de texto directo para la creación de Ground Truth en Transkribus, con precisión milimétrica. Tu única tarea es transcribir lo que se ve en la imagen, respetando la grafía, la disposición y las marcas del manuscrito original.
+
+FLUJO: identifica la página (folio, recto o verso, columnas, encabezados, rúbricas, iniciales, reclamos o signaturas). Lee la imagen línea a línea: una línea de la imagen es una línea de la transcripción.
+
+1. ESTRUCTURA Y FORMATO
+- Mantén la disposición de las líneas, aunque queden incompletas o con espacios.
+- Texto a dos columnas: transcribe primero la columna izquierda y después la derecha, separadas por [Columna A] y [Columna B]. Antes de la primera marca, {CB2. } si hay dos columnas, o {CB1. } si hay una.
+- Indica el folio con [fol. 12r] o [fol. 12v] al inicio de la página, según corresponda. Si no se ve la numeración, omite la marca.
+- Encabezamientos superiores: {HD. texto }. Rúbricas o títulos de sección: {RUB. }. Iniciales: {IN3.}, donde el número indica las líneas que abarca.
+- El reclamo ({CW. }) y la signatura ({SG. }) se transcriben al final de la página en su posición, nunca se omiten.
+- Si una línea continúa en la siguiente por corte de columna o de página, usa +. Si el flujo de lectura se interrumpe entre columnas o folios, usa ⇒.
+
+2. DESARROLLO DE ABREVIATURAS
+- Toda abreviatura desarrollada va entre ＜ y ＞ (ancho completo). Ejemplos: q＜ue＞, cap＜itul＞o, d＜ic＞ho, n＜uest＞ro.
+- Letra volada: desarrolla las letras omitidas con ＜ ＞ y coloca ' delante de la letra volada. Ejemplo: q＜u＞a'l.
+- Tilde sobre vocal o consonante: desarrolla la nasal omitida (ca＜m＞po, ＜n＞ombre, ＜n＞o＜m＞bre). Si dudas entre m y n, prioriza la forma admisible en la ortografía de la época.
+- Abreviaturas de sílabas comunes (q̃, ṗ, p̃, ꝓ, ꝑ, ꝯ y similares) se desarrollan entre ＜ ＞ según su forma lingüística.
+- Tratamientos (Vuestra Magestad, S.M., Ex.a) se desarrollan igual: V＜uestr＞a M＜agestad＞.
+
+3. SIGNOS Y SÍMBOLOS
+- Notas tironianas: &. Incluye la conjunción et siempre que aparezca como nota.
+- Calderones y separaciones de tipo párrafo: ¶.
+- Continuaciones de línea por calderón: %2 (final de la línea anterior) y %3 (final de la línea siguiente).
+- Paréntesis del texto original: ≺ ≻. Los paréntesis editoriales no se usan para esto.
+- Palabra ilegible aislada entre espacios: [??]. Varias palabras ilegibles: [???]. Pasaje completo sin lectura posible: [...]. Palabra parcialmente ilegible: [??] pegado a las letras legibles, como fueron a po[??].
+- Marcas del copista: tachadura (^ ), por ejemplo uini(^ni)eron; enmienda del copista [^ ], por ejemplo [^ma]nera; inserción de otra mano [^#2 ].
+- Enmienda editorial: [ ] para completar una letra o sílaba ausente que se reconstruye con seguridad. ( ) cuando el texto debe suprimirse por error evidente del copista.
+- Caracteres invertidos en el original: $.
+- Glosas marginales: {GL. texto }. Adiciones del copista: {AD. texto }.
+- Iluminaciones, miniaturas, diagramas y blancos: {ILL. }, {MIN. }, {DIAG. }, {BLNK. }, con su relación con el texto ({=ILL.}, {ILL=.}, {=ILL=.}) cuando corresponda.
+- Elemento que no puede transcribirse directamente: {SYMB. }.
+
+4. FIDELIDAD LECTORA (PROHIBIDO MODERNIZAR)
+- Respeta la ortografía original de forma absoluta: u/v, i/j, c/ç, y/i, grafías como muger o escrevir. No modernices ninguna palabra, ni siquiera las que parezcan errores.
+- No utilices ı ni ſ: usa i o j según el manuscrito, y s en lugar de la s larga.
+- Respeta el uso original de mayúsculas y minúsculas, incluidos nombres propios y cargos en minúscula.
+- Respeta las aglutinaciones y separaciones de la época (delas, enestos, daquel, enla, consu). No separes según el uso moderno.
+- Respeta la puntuación original. NUNCA añadas puntuación moderna: ni comas, ni puntos, ni acentos, ni signos de interrogación o exclamación que no aparezcan.
+- NUNCA elimines palabras repetidas. Las ditografías se conservan.
+- Si una palabra está mal escrita, transcríbela tal cual.
+
+5. LENGUAS Y ETIQUETAS EDITORIALES
+- Tramos en otra lengua: {LAT. } latín, {PRT. } portugués, {ITL. } italiano, {FRN. } francés, {CAT. } catalán, {GAL. } gallego, {GRK. }, {HEB. }, {ARB. }, {BAS. }, {ENG. }, {GER. }, {PRV. }, {ARM. }, {LAM. }, {ARG. }. Los tramos en latín son frecuentes en documentos eclesiásticos, testamentos y pleitos: márcalos siempre.
+- {RMK: ...} solo para una característica física visible que afecte a la lectura, con un comentario breve en inglés, por ejemplo {RMK: stain covers line 4.}. Nunca para comentar el contenido.
+
+6. REGLA DE SALIDA (CRÍTICA)
+No incluyas saludos, explicaciones, justificaciones ni comentarios. Devuelve ÚNICA Y EXCLUSIVAMENTE el texto transcrito con las etiquetas que correspondan. No uses bloques de código ni markdown.
+Si la imagen no contiene texto manuscrito legible, devuelve únicamente {BLNK. } o la etiqueta que describa la página (por ejemplo {ILL. }), sin nada más.`;
+
+  const TASK = "Transcribe la imagen adjunta siguiendo las reglas anteriores. Devuelve solo la transcripción.";
+
+  // Elementos especiales: notas al margen, firmas y signos notariales
+  const ELEMENTS_RULES = `ELEMENTOS ESPECIALES (aplícalos siempre que aparezcan en la imagen):
+- Notas al margen: cuando haya una anotación escrita en el margen, indícalo antes de su contenido con la posición donde esté: [Nota al margen izquierdo], [Nota al margen derecho], [Nota al margen superior] o [Nota al margen inferior]. A continuación transcribe el contenido de la nota tal cual, y después continúa con el cuerpo principal del texto en el punto donde se interrumpió.
+- Firmas: cuando aparezca una firma junto a un nombre (normalmente al final del documento), transcribe el nombre tal como figura y añade [rúbrica] a continuación. Ejemplo: Jesús Blanc [rúbrica].
+- Sellos de notario o signos notariales: indícalo como [signo] en el lugar donde aparezca.
+- Estas indicaciones entre corchetes son descripciones del documento: no las confundas con las abreviaturas desarrolladas ni con las partes ilegibles.`;
+
+  // Norma paleográfica: fidelidad letra a letra, sin etiquetas HSMS ni marcas editoriales
+  const PALEO_RULES = `Actúas como transcriptor paleográfico de documentos hispánicos de los siglos XVI al XVIII. Transcribe la imagen, de seguido, respetando la grafía original de forma absoluta (u/v, i/j, c/ç, y/i, grafías como deçir o dezir, acentos y aglutinaciones tal como aparecen), sin modernizar ninguna palabra ni letra. Normaliza solo la puntuación y la separación: añade puntos, comas, espacios u otros signos cuando corresponda al sentido del texto, sin cambiar las letras. Conserva las ditografías y las palabras repetidas. Escribe el texto de seguido, sin separar cada renglón: usa saltos de línea solo cuando sean necesarios (cambio de párrafo o de sección del documento). Conserva las ditografías y las palabras repetidas. Desarrolla las abreviaturas entre corchetes según su forma lingüística (q[ue], [n]ombre), sin etiquetas HSMS, sin llaves, sin marcas de columna ni de folio. Usa [??] para una palabra parcialmente ilegible, [???] para varias palabras ilegibles y [...] para un pasaje sin lectura posible. Transcribe el latín u otras lenguas igual que el resto, sin etiquetarlas. No incluyas comentarios ni explicaciones. Devuelve únicamente el texto transcrito, sin bloques de código.`;
+
+  // ---------- Carga de archivos ----------
+  const drop = $("drop");
+  ["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", ev => { const f = ev.dataTransfer.files[0]; if (f) load(f); });
+  $("file").addEventListener("change", ev => { const f = ev.target.files[0]; if (f) load(f); });
+
+  async function load(file){
+    baseName = file.name.replace(/\.[^.]+$/, "") || "transcripcion";
+    $("dropText").textContent = file.name;
+    setStatus("Preparando " + file.name + "…");
+    pages = [];
+    current = -1;
+    try {
+      if (/pdf$/i.test(file.type) || /\.pdf$/i.test(file.name)) {
+        if (!window.pdfjsLib) throw new Error("pdf.js no disponible");
+        pages = await renderPdf(await file.arrayBuffer());
+      } else {
+        pages = [await imageToPage(file, file.name)];
+      }
+      renderList();
+      setStatus(pages.length + " página(s) preparadas. Pulsa «Transcribir todo» o elige una página.");
+      $("transcribeAll").disabled = !sampleFn;
+      select(0);
+    } catch (e) {
+      console.error(e);
+      setStatus("No se pudo preparar el archivo. Comprueba que es un PDF, JPG o PNG válido.", true);
+    }
+  }
+
+  // Redimensiona y normaliza a JPEG (fondo blanco) para enviar a la IA
+  const MAX_SIDE = 2200;
+  function canvasToPage(canvas, name){
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        const t = document.createElement("canvas");
+        const k = 220 / Math.max(canvas.width, canvas.height);
+        t.width = Math.round(canvas.width * k); t.height = Math.round(canvas.height * k);
+        t.getContext("2d").drawImage(canvas, 0, 0, t.width, t.height);
+        t.toBlob(tb => resolve({
+          name, blob, thumb: URL.createObjectURL(tb),
+          text: "", status: "pending", error: ""
+        }), "image/jpeg", 0.85);
+      }, "image/jpeg", 0.92);
+    });
+  }
+
+  function fillWhite(canvas){
+    const ctx = canvas.getContext("2d");
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  async function renderPdf(buf){
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const out = [];
+    for (let i = 1; i <= pdf.numPages; i++){
+      setStatus("Renderizando página " + i + " de " + pdf.numPages + "…");
+      const page = await pdf.getPage(i);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(2.5, MAX_SIDE / Math.max(base.width, base.height));
+      const vp = page.getViewport({ scale });
+      const c = document.createElement("canvas");
+      c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+      fillWhite(c);
+      out.push(await canvasToPage(c, "Página " + i));
+    }
+    return out;
+  }
+
+  function imageToPage(file, name){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        fillWhite(c);
+        resolve(await canvasToPage(c, name));
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => reject(new Error("imagen no válida"));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // ---------- Transcripción ----------
+  function cleanOutput(text){
+    return String(text || "")
+      .replace(/^\s*```[a-zA-Z]*\s*/i, "")
+      .replace(/\s*```\s*$/i, "")
+      .trim();
+  }
+
+  async function transcribe(i){
+    const p = pages[i];
+    if (!p) return;
+    if (!sampleFn) { setStatus("La transcripción con IA no está disponible en este visor.", true); return; }
+    p.status = "working"; p.error = "";
+    renderList();
+    if (current === i) updateEditor();
+    try {
+      currentAbort = new AbortController();
+      const prompt = ($("norm").value === "paleo" ? PALEO_RULES : RULES) + "\n\n" + ELEMENTS_RULES;
+      const res = await sampleFn(prompt + "\n\n" + TASK, {
+        images: [p.blob],
+        modelTier: $("model").value,
+        signal: currentAbort.signal,
+        cache: false
+      });
+      p.text = cleanOutput(res.text);
+      p.status = "done";
+    } catch (e) {
+      p.status = (stopRequested || (e && e.name === "AbortError")) ? "pending" : "error";
+      p.error = e && e.code === "not_granted" ? "Sin permiso para transcribir"
+              : e && e.code === "rate_limited" ? "Límite de uso alcanzado; espera y reintenta"
+              : (e && e.message) || "Error al transcribir";
+      console.error(e);
+    }
+    renderList();
+    if (current === i) updateEditor();
+  }
+
+  async function transcribeAll(){
+    if (!pages.length) return;
+    if (!sampleFn) { setStatus("La transcripción con IA no está disponible en este visor.", true); return; }
+    setBusy(true);
+    let done = 0, failed = 0;
+    for (let i = 0; i < pages.length; i++){
+      if (stopRequested) break;
+      if (pages[i].status === "done") continue;
+      setStatus("Transcribiendo " + pages[i].name + " (" + (i + 1) + " de " + pages.length + ")…");
+      await transcribe(i);
+      if (pages[i].status === "error") { failed++; if (pages[i].error.startsWith("Sin permiso") || pages[i].error.startsWith("Límite")) break; }
+      else done++;
+    }
+    setBusy(false);
+    if (stopRequested) { setStatus("Transcripción pausada. Pulsa «Transcribir todo» para continuar con las páginas pendientes."); return; }
+    setStatus(failed
+      ? "Terminado con errores. Revisa las páginas marcadas y usa «Repetir página»."
+      : "Transcripción completada: " + pages.length + " página(s). Revísalas con la imagen antes de usarlas.", failed > 0);
+  }
+
+  function setBusy(b){
+    $("transcribeAll").disabled = b || !pages.length;
+    $("retry").disabled = b || current < 0;
+    $("pause").hidden = !b;
+    $("pause").disabled = false;
+    if (b) stopRequested = false;
+  }
+
+  // ---------- Lista y editor ----------
+  function renderList(){
+    const box = $("pages");
+    if (!pages.length){
+      box.innerHTML = '<div class="empty">Las páginas aparecerán aquí.</div>';
+      return;
+    }
+    box.innerHTML = "";
+    pages.forEach((p, i) => {
+      const btn = document.createElement("button");
+      btn.className = "page" + (i === current ? " on" : "");
+      btn.type = "button";
+      const img = document.createElement("img");
+      img.src = p.thumb; img.alt = p.name;
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const name = document.createElement("span");
+      name.className = "name"; name.textContent = p.name;
+      const badge = document.createElement("span");
+      const map = {
+        pending: ["Pendiente", ""], working: ["Transcribiendo…", "work"],
+        done: ["Transcrita", "ok"], error: [p.error || "Error", "err"]
+      };
+      badge.className = "badge " + map[p.status][1];
+      badge.textContent = p.status === "done" && p.text ? map[p.status][0] + " · " + wordsOf(p.text) + " palabras" : map[p.status][0];
+      meta.append(name, badge);
+      btn.append(img, meta);
+      btn.addEventListener("click", () => select(i));
+      box.appendChild(btn);
+    });
+  }
+
+  function select(i){
+    current = i;
+    renderList();
+    updateEditor();
+    setBusy(false);
+  }
+
+  function updateEditor(){
+    const p = pages[current];
+    const out = $("out");
+    if (!p){
+      out.value = "";
+      $("pageInfo").textContent = "";
+      $("copy").disabled = true;
+      $("retry").disabled = true;
+      return;
+    }
+    out.value = p.text || "";
+    showOriginal(p);
+    out.placeholder = p.status === "working" ? "Transcribiendo…" : "Esta página aún no tiene transcripción.";
+    $("pageInfo").textContent = p.name + " · " + statsOf(p.text);
+    $("copy").disabled = !p.text;
+    $("retry").disabled = !sampleFn || p.status === "working";
+    $("save").disabled = !pages.some(x => x.text) || !downloads;
+  }
+
+  // Las correcciones manuales se guardan en la página
+  $("out").addEventListener("input", () => {
+    if (current >= 0) {
+      pages[current].text = $("out").value;
+      $("pageInfo").textContent = pages[current].name + " · " + statsOf(pages[current].text);
+      $("copy").disabled = !pages[current].text;
+      $("save").disabled = !pages.some(x => x.text) || !downloads;
+    }
+  });
+
+  $("transcribeAll").addEventListener("click", () => askLimits(transcribeAll));
+  $("pause").addEventListener("click", () => {
+    stopRequested = true;
+    if (currentAbort) currentAbort.abort();
+    $("pause").disabled = true;
+    setStatus("Pausando…");
+  });
+  $("retry").addEventListener("click", () => askLimits(retryCurrent));
+  async function retryCurrent(){
+    if (current < 0) return;
+    setBusy(true);
+    setStatus("Repitiendo " + pages[current].name + "…");
+    await transcribe(current);
+    setBusy(false);
+    setStatus(pages[current].status === "done" ? "Página transcrita de nuevo." : pages[current].error, pages[current].status !== "done");
+  }
+
+  $("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($("out").value);
+      setStatus("Página copiada al portapapeles.");
+    } catch (e) {
+      $("out").select();
+      setStatus("Selecciona el texto y cópialo manualmente.");
+    }
+  });
+
+  $("save").addEventListener("click", async () => {
+    if (!downloads) return;
+    const text = pages.filter(p => p.text).map(p => p.text).join("\n\n") + "\n";
+    try {
+      await downloads.save({ filename: baseName + "_transcripcion.txt", data: text });
+      setStatus("Archivo guardado: " + baseName + "_transcripcion.txt");
+    } catch (e) {
+      setStatus("No se pudo guardar el archivo. Puedes copiar cada página.", true);
+    }
+  });
+
+  // Visor del original: muestra la imagen de la página junto a la transcripción
+  let viewUrl = null;
+  function showOriginal(p){
+    const img = $("pageImg"), empty = $("viewerEmpty");
+    if (viewUrl) { URL.revokeObjectURL(viewUrl); viewUrl = null; }
+    if (!p || !p.blob){
+      img.removeAttribute("src");
+      img.hidden = true;
+      empty.hidden = false;
+      return;
+    }
+    viewUrl = URL.createObjectURL(p.blob);
+    img.src = viewUrl;
+    img.alt = "Original: " + p.name;
+    img.hidden = false;
+    empty.hidden = true;
+  }
+  // Zoom del visor: niveles fijos, con «Ajustar» como 100 %
+  const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+  let zi = 2;
+  function applyZoom(){
+    $("imgwrap").style.width = (ZOOMS[zi] * 100) + "%";
+    $("zLabel").textContent = Math.round(ZOOMS[zi] * 100) + " %";
+  }
+  $("zIn").addEventListener("click", () => { zi = Math.min(ZOOMS.length - 1, zi + 1); applyZoom(); });
+  $("zOut").addEventListener("click", () => { zi = Math.max(0, zi - 1); applyZoom(); });
+  $("zFit").addEventListener("click", () => { zi = 2; applyZoom(); });
+  applyZoom();
+
+  // Contadores de palabras, caracteres y líneas
+  function wordsOf(t){ return (String(t || "").match(/\S+/g) || []).length; }
+  function statsOf(t){
+    if (!t) return "sin transcribir";
+    const s = String(t);
+    return s.split("\n").length + " líneas · " + wordsOf(s) + " palabras · " + s.length + " caracteres";
+  }
+
+  // ---------- Contraste y anotaciones sobre el original ----------
+  let tool = "pen", annColor = "#e0312b", drawing = null;
+  function fitCanvas(){
+    const img = $("pageImg"), cv = $("ann");
+    if (img.hidden || !img.clientWidth){ cv.width = 0; cv.height = 0; return; }
+    cv.width = img.clientWidth; cv.height = img.clientHeight;
+    redraw();
+  }
+  function redraw(){
+    const cv = $("ann"), c = cv.getContext("2d");
+    c.clearRect(0, 0, cv.width, cv.height);
+    const p = pages[current];
+    if (p && p.ann) p.ann.forEach(s => drawStroke(c, cv, s));
+    if (drawing) drawStroke(c, cv, drawing);
+  }
+  function drawStroke(c, cv, s){
+    const W = cv.width, H = cv.height, pts = s.pts;
+    c.save();
+    c.strokeStyle = s.c; c.lineCap = "round"; c.lineJoin = "round";
+    c.beginPath();
+    if (s.t === "line"){
+      c.globalAlpha = 0.35; c.lineWidth = Math.max(10, H * 0.018);
+      c.moveTo(pts[0][0] * W, pts[0][1] * H);
+      c.lineTo(pts[pts.length - 1][0] * W, pts[pts.length - 1][1] * H);
+      c.stroke();
+    } else if (s.t === "rect"){
+      const a = pts[0], b = pts[pts.length - 1];
+      c.lineWidth = 2;
+      c.strokeRect(a[0] * W, a[1] * H, (b[0] - a[0]) * W, (b[1] - a[1]) * H);
+    } else {
+      c.lineWidth = 2.5;
+      pts.forEach((q, i) => i ? c.lineTo(q[0] * W, q[1] * H) : c.moveTo(q[0] * W, q[1] * H));
+      c.stroke();
+    }
+    c.restore();
+  }
+  const cvEl = $("ann");
+  function pos(e){
+    const r = cvEl.getBoundingClientRect();
+    return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
+  }
+  cvEl.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || $("pageImg").hidden || !pages[current]) return;
+    cvEl.setPointerCapture(e.pointerId);
+    drawing = { t: tool, c: annColor, pts: [pos(e)] };
+  });
+  cvEl.addEventListener("pointermove", e => {
+    if (!drawing) return;
+    const q = pos(e);
+    if (drawing.t === "pen") drawing.pts.push(q);
+    else drawing.pts = [drawing.pts[0], q];
+    redraw();
+  });
+  const endDraw = () => {
+    if (!drawing) return;
+    const p = pages[current];
+    if (p) (p.ann = p.ann || []).push(drawing);
+    drawing = null;
+    redraw();
+  };
+  cvEl.addEventListener("pointerup", endDraw);
+  cvEl.addEventListener("pointercancel", endDraw);
+  document.querySelectorAll(".tool").forEach(b => b.addEventListener("click", () => {
+    tool = b.dataset.tool;
+    document.querySelectorAll(".tool").forEach(x => x.classList.toggle("on", x === b));
+  }));
+  $("annColor").addEventListener("change", e => { annColor = e.target.value; });
+  $("annClear").addEventListener("click", () => { const p = pages[current]; if (p) p.ann = []; redraw(); });
+  $("contrast").addEventListener("click", () => {
+    const on = $("viewer").classList.toggle("contrast");
+    $("contrast").setAttribute("aria-pressed", String(on));
+  });
+  $("pageImg").addEventListener("load", fitCanvas);
+  if (window.ResizeObserver) new ResizeObserver(fitCanvas).observe($("pageImg"));
+
+  // Desplazamiento del visor con el botón derecho del ratón
+  const viewerEl = $("viewer");
+  let panState = null;
+  viewerEl.addEventListener("contextmenu", e => e.preventDefault());
+  viewerEl.addEventListener("pointerdown", e => {
+    if (e.button !== 2) return;
+    e.preventDefault();
+    panState = { x: e.clientX, y: e.clientY, sl: viewerEl.scrollLeft, st: viewerEl.scrollTop };
+    viewerEl.setPointerCapture(e.pointerId);
+    viewerEl.classList.add("panning");
+  });
+  viewerEl.addEventListener("pointermove", e => {
+    if (!panState) return;
+    viewerEl.scrollLeft = panState.sl - (e.clientX - panState.x);
+    viewerEl.scrollTop = panState.st - (e.clientY - panState.y);
+  });
+  const endPan = () => { panState = null; viewerEl.classList.remove("panning"); };
+  viewerEl.addEventListener("pointerup", endPan);
+  viewerEl.addEventListener("pointercancel", endPan);
+
+  // Ventana de aviso antes de enviar páginas a la transcripción
+  function askLimits(action){
+    const m = $("limitModal");
+    m.hidden = false;
+    const close = () => {
+      m.hidden = true;
+      $("limitOk").removeEventListener("click", ok);
+      $("limitCancel").removeEventListener("click", close);
+    };
+    const ok = () => { close(); action(); };
+    $("limitOk").addEventListener("click", ok);
+    $("limitCancel").addEventListener("click", close);
+  }
+
+  function setStatus(msg, isErr){
+    const s = $("status");
+    s.textContent = msg;
+    s.className = isErr ? "err" : "";
+  }
+})();
+</script>
+<div id="limitModal" class="modal" hidden>
+  <div class="glass modal-card" role="dialog" aria-modal="true" aria-labelledby="limitTitle">
+    <h2 id="limitTitle">Antes de transcribir</h2>
+    <ul class="modal-list">
+      <li>Puedes transcribir hasta <strong>10 páginas al día</strong>.</li>
+      <li>Cada imagen puede pesar hasta <strong>5 MB</strong>.</li>
+      <li>El servicio es gratuito y compartido. Si se agota la capacidad, verás un aviso y tendrás que esperar.</li>
+      <li>No subas datos sensibles ni información personal de terceros: las imágenes se procesan con Google Gemini.</li>
+    </ul>
+    <div class="row" style="justify-content:flex-end">
+      <button id="limitCancel" class="btn">Cancelar</button>
+      <button id="limitOk" class="btn primary">Entendido, transcribir</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
